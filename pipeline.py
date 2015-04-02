@@ -33,7 +33,7 @@ if StrictVersion(seesaw.__version__) < StrictVersion("0.1.5"):
 # Update this each time you make a non-cosmetic change.
 # It will be added to the WARC files and reported to the tracker.
 
-VERSION = "20150402.01"
+VERSION = "20150402.02"
 USER_AGENT = 'ArchiveTeam'
 TRACKER_ID = 'friendfeeddisco'
 TRACKER_HOST = 'tracker.archiveteam.org'
@@ -118,9 +118,12 @@ class CustomProcessArgs(object):
 
         counter = 0
 
-        if item_type == 'page':
+        if item_type == 'page' or item_type == 'group':
             # Expect something like page:aa or page:gh
-            url = 'http://friendfeed.com/groups/search?q={0}&start=0'.format(item_value)
+            if item_type == 'page':
+                url = 'http://friendfeed.com/groups/search?q={0}&start=0'.format(item_value)
+            elif item_type == 'group':
+                url = 'http://friendfeed.com/{0}/subscribers?start=0'.format(item_value)
             tries = 0
             start_num = "1"
             while True:
@@ -135,7 +138,7 @@ class CustomProcessArgs(object):
                 else:
                     if html:
                         end_num = str(extract_pages(html))
-                        return ['python', 'discover.py', start_num, end_num, item_value,
+                        return ['python', 'discover.py', start_num, end_num, item_value, item_type,
                                 "%(item_dir)s/%(warc_file_base)s.txt.gz" % item]
                     break
                 tries += 1
