@@ -20,7 +20,8 @@ def main():
     start_num = int(sys.argv[1])
     end_num = int(sys.argv[2])
     item_value = sys.argv[3]
-    output_filename = sys.argv[4]  # this should be something like myfile.txt.gz
+    item_type = sys.argv[4]
+    output_filename = sys.argv[5]  # this should be something like myfile.txt.gz
 
     assert start_num <= end_num
 
@@ -29,7 +30,7 @@ def main():
 
     gzip_file = gzip.GzipFile(output_filename, 'wb')
 
-    for shortcode in check_range(start_num, end_num, item_value):
+    for shortcode in check_range(start_num, end_num, item_value, item_type):
         # Write the valid result one per line to the file
         line = '{0}\n'.format(shortcode)
         gzip_file.write(line.encode('ascii'))
@@ -39,10 +40,13 @@ def main():
     print('Done')
 
 
-def check_range(start_num, end_num, item_value):
+def check_range(start_num, end_num, item_value, item_type):
     for num in range(start_num, end_num + 1):
         shortcode = num
-        url = 'http://friendfeed.com/groups/search?q={0}&start={1}'.format(item_value, str((int(shortcode)-1)*48))
+        if item_type == 'page':
+            url = 'http://friendfeed.com/groups/search?q={0}&start={1}'.format(item_value, str((int(shortcode)-1)*48))
+        elif item_type == 'group':
+            url = 'http://friendfeed.com/{0}/subscribers?start={1}'.format(item_value, str((int(shortcode)-1)*80))
         counter = 0
 
         while True:
@@ -60,13 +64,21 @@ def check_range(start_num, end_num, item_value):
                 time.sleep(10)
             else:
                 if text:
-                    yield 'page:{0}:{1}'.format(item_value, shortcode)
-                    print('page:{0}:{1}'.format(item_value, shortcode))
+                    if item_type == 'page':
+                        yield 'page:{0}:{1}'.format(item_value, shortcode)
+                        print('page:{0}:{1}'.format(item_value, shortcode))
+                    elif item_type == 'group':
+                        yield 'group:{0}:{1}'.format(item_value, shortcode)
+                        print('group:{0}:{1}'.format(item_value, shortcode))
                     sys.stdout.flush()
 
                     for file in extract_files(text):
-			yield 'group:{0}'.format(file)
-                        print('group:{0}'.format(file))
+                        if item_type == 'page':
+			    yield 'group:{0}'.format(file)
+                            print('group:{0}'.format(file))
+                        elif item_type == 'group':
+			    yield 'profile:{0}'.format(file)
+                            print('profile:{0}'.format(file))
                         sys.stdout.flush()
                 break  # stop the while loop
 
