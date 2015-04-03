@@ -33,7 +33,7 @@ if StrictVersion(seesaw.__version__) < StrictVersion("0.1.5"):
 # Update this each time you make a non-cosmetic change.
 # It will be added to the WARC files and reported to the tracker.
 
-VERSION = "20150402.02"
+VERSION = "20150403.01"
 USER_AGENT = 'ArchiveTeam'
 TRACKER_ID = 'friendfeeddisco'
 TRACKER_HOST = 'tracker.archiveteam.org'
@@ -117,28 +117,35 @@ class CustomProcessArgs(object):
         item_type, item_value = item['item_name'].split(':', 1)
 
         counter = 0
+        end_num2 = 1
 
-        if item_type == 'page' or item_type == 'group':
-            # Expect something like page:aa or page:gh
+        if item_type == 'page' or item_type == 'account':
+            # Expect something like page:aa or account:name
             if item_type == 'page':
-                url = 'http://friendfeed.com/groups/search?q={0}&start=0'.format(item_value)
-            elif item_type == 'group':
-                url = 'http://friendfeed.com/{0}/subscribers?start=0'.format(item_value)
+                url = 'http://friendfeed.com/groups/search?q={0}&'.format(item_value)
+            elif item_type == 'account':
+                url = 'http://friendfeed.com/{0}/subscribers?'.format(item_value)
+                url2 = 'http://friendfeed.com/{0}/subscriptions?'.format(item_value)
             tries = 0
             start_num = "1"
             while True:
                 if counter > 20:
                     raise Exception('Too many retries, giving up.')
                 try:
-                    html = friendfetch(url)
+                    if item_type == 'account':
+                        max_num = subfetch(url, item_type)
+                        max_num2 = subfetch(url2, '{0}2'.format(item_type))
+                    else:
+                        max_num = subfetch(url, item_type)
                 except FetchError:
                     print('Sleeping for some time...')
                     sys.stdout.flush()
                     time.sleep(15)
                 else:
-                    if html:
-                        end_num = str(extract_pages(html))
-                        return ['python', 'discover.py', start_num, end_num, item_value, item_type,
+                    if max_num and max_num2:
+                        end_num = str(max_num)
+                        end_num2 = str(max_num2)
+                        return ['python', 'discover.py', start_num, end_num, end_num2, item_value, item_type,
                                 "%(item_dir)s/%(warc_file_base)s.txt.gz" % item]
                     break
                 tries += 1
@@ -149,16 +156,41 @@ def extract_pages(html):
     # Return number of pages
     match = re.search(r'class="page">([0-9]+)<\/a>[^<]*<[^"]*"[^"]*">Next page', html)
     if match:
-        print("return".format(match.group(1)))
+        print("return".format(str(match.group(1))))
         sys.stdout.flush()
         return match.group(1)
     else:
-	print("return 0")
-        return "1"
+	match = re.search(r'page">([0-9]+)<\/a>[^<]*<\/div>', html)
+        if match:
+            return match.group(1)
+        else:
+            print("return 0")
+            return "1"
 
 class FetchError(Exception):
     # Custom error class
     pass
+
+def subfetch(url_, item_type):
+    pagenum = 1
+    while True:
+        if item_type == 'account2':
+            url = '{0}start={1}'.format(url_, str((int(pagenum)-1)*72))
+        elif item_type == 'account':
+            url = '{0}start={1}'.format(url_, str((int(pagenum)-1)*80))
+        elif item_type == 'page':
+            url = '{0}start={1}'.format(url_, str((int(pagenum)-1)*48))
+        html = friendfetch(url)
+        if html:
+            pagenum_ = extract_pages(html)
+            if str(pagenum_) == str(pagenum):
+                return pagenum
+                break
+            else:
+                pagenum = pagenum_
+        else:
+            raise FetchError()
+            break
 
 def friendfetch(url):
     # Fetch page to extract number of pages with results
