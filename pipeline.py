@@ -33,7 +33,7 @@ if StrictVersion(seesaw.__version__) < StrictVersion("0.1.5"):
 # Update this each time you make a non-cosmetic change.
 # It will be added to the WARC files and reported to the tracker.
 
-VERSION = "20150403.02"
+VERSION = "20150404.01"
 USER_AGENT = 'ArchiveTeam'
 TRACKER_ID = 'friendfeeddisco'
 TRACKER_HOST = 'tracker.archiveteam.org'
@@ -185,9 +185,12 @@ def subfetch(url_, item_type):
             if str(pagenum_) == str(pagenum):
                 return pagenum
                 break
+            elif '"description"' in html:
+                return pagenum
+                break
             else:
                 pagenum = pagenum_
-        else:
+        elif "<h1>File Not Found</h1>" in html:
             raise FetchError()
             break
 
@@ -201,6 +204,8 @@ def friendfetch(url):
     if html.status_code == 200:
         if not html.text:
             raise FetchError()
+        return html.text
+    if html.status_code == 404:
         return html.text
     else:
         raise FetchError()
