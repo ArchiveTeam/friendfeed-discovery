@@ -33,7 +33,7 @@ if StrictVersion(seesaw.__version__) < StrictVersion("0.1.5"):
 # Update this each time you make a non-cosmetic change.
 # It will be added to the WARC files and reported to the tracker.
 
-VERSION = "20150403.01"
+VERSION = "20150403.02"
 USER_AGENT = 'ArchiveTeam'
 TRACKER_ID = 'friendfeeddisco'
 TRACKER_HOST = 'tracker.archiveteam.org'
@@ -116,7 +116,6 @@ class CustomProcessArgs(object):
     def realize(self, item):
         item_type, item_value = item['item_name'].split(':', 1)
 
-        counter = 0
         end_num2 = 1
 
         if item_type == 'page' or item_type == 'account':
@@ -129,7 +128,7 @@ class CustomProcessArgs(object):
             tries = 0
             start_num = "1"
             while True:
-                if counter > 20:
+                if tries > 20:
                     raise Exception('Too many retries, giving up.')
                 try:
                     if item_type == 'account':
